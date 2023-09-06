@@ -1,0 +1,18 @@
+---
+# ansible-galaxy collection install -r requirements.yml
+collections:
+  - name: ansible.netcommon
+
+  - name: redhat.rhv
+    version: 1.4.1
+
+  - name: community.crypto
+    version: 1.9.3
+
+  - name: ansible.controller
+
+  - name: /tmp/community-dns-1.2.0.tar.gz
+
+  - name: http://www.example.com/redhat-insights-1.0.5.tar.gz
+
+  - name: git@github.com:ansible-collections/community.mysql.git

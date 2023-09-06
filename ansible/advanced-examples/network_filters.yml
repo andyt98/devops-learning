@@ -1,0 +1,98 @@
+---
+- hosts: localhost
+  gather_facts: false
+  name: Network filters examples
+  tasks:
+  - name: Filter example
+    vars:
+      listips:
+        - 192.168.2.1
+        - 10.0.0.128/25
+        - 172.24.10.0/255.255.255.0
+        - 172.24.10.0/255.255.255.255
+        - ff02::1
+        - ::1
+        - 2001::1/64
+        - 2001::/64
+        - www.redhat.com
+    ansible.builtin.debug:
+      msg:
+        - Display all addresses: "{{ listips | ansible.utils.ipaddr }}"
+        - Use netmask: "{{ listips | ansible.utils.ipaddr('netmask') }}"
+        - Use host: "{{ listips | ansible.utils.ipaddr('host') }}"
+        - Use net: "{{ listips | ansible.utils.ipaddr('net') }}"
+        - Use private: "{{ listips | ansible.utils.ipaddr('private') }}"
+        - Use public: "{{ listips | ansible.utils.ipaddr('public') }}"
+        - Use ipwrap: "{{ listips | ansible.netcommon.ipwrap }}"
+        - Use ipaddr and ipwrap: "{{ listips | ansible.utils.ipaddr | ansible.utils.ipwrap }}"
+
+  - name: Manipulating IP Addresses
+    ansible.builtin.debug:
+      msg:
+        - "{{ '192.0.2.1/24' | ansible.utils.ipaddr('address') }}"
+        - "{{ '192.0.2.1/24' | ansible.utils.ipaddr('netmask') }}"
+        - "{{ '192.0.2.1/24' | ansible.utils.ipaddr('prefix') }}"
+        - "{{ '192.0.2.1/24' | ansible.utils.ipaddr('broadcast') }}"
+        - "{{ '192.0.2.1/24' | ansible.utils.ipaddr('network') }}"
+        - "{{ '192.0.2.1/24' | ansible.utils.ipaddr('revdns') }}"
+        - "{{ '192.0.2.0/24' | ansible.utils.ipaddr(5) }}"
+        - "{{ '192.0.2.0/24' | ansible.utils.ipaddr('range_usable') }}"
+        - "{{ '192.0.2.0/24' | ansible.utils.network_in_usable('192.0.2.5') }}"
+        - "{{ '192.0.2.5/24' | ansible.utils.ipaddr('next_usable') }}"
+
+  - name: Use cidr_merge filter to aggregate a list of subnets and individual hosts into the minimal representation.
+    vars:
+      mynetworks:
+        - 10.0.1.0/24
+        - 10.0.2.0/24
+        - 10.0.3.0/24
+        - 10.0.100.0/24
+        - 2001:db8::/64
+        - 2001:db8:0:1::/64
+    ansible.builtin.debug:
+      msg: "{{ mynetworks | ansible.utils.cidr_merge }}"
+
+  - name: Set address and network facts
+    ansible.builtin.set_fact:
+      ipv4_addr: "{{ ansible_facts['default_ipv4']['address'] }}"
+      ipv4_subnet: "{{ ansible_facts['default_ipv4']['netmask'] }}"
+
+  - name: Set facts derived from ipv4_addr and ipv4_subnet
+    ansible.builtin.set_fact:
+      server_address: "{{ ipv4_addr | ansible.netcommon.ipaddr }}"
+      ptr_record: "{{ ipv4_addr | ansible.netcommon.ipaddr('revdns') }}"
+      net_mask: "{{ ipv4_addr }}/{{ ipv4_subnet }}"
+
+  - name: Set facts derived from net_mask
+    ansible.builtin.set_fact:
+      cidr: "{{ net_mask | ansible.netcommon.ipaddr('network/prefix') }}"
+      broadcast: "{{ net_mask | ansible.netcommon.ipaddr('broadcast') }}"
+
+  - name: Display server_address
+    ansible.builtin.debug:
+      msg: server_address is {{ server_address }}
+
+  - name: Display PTR record form for server_address
+    ansible.builtin.debug:
+      msg: ptr_record is {{ ptr_record }}
+
+  - name: Display address and netmask in VLSM notation
+    ansible.builtin.debug:
+      msg: net_mask is {{ net_mask }}
+
+  - name: Display address and prefix in CIDR notation
+    ansible.builtin.debug:
+      msg: cidr is {{ cidr }}
+
+  - name: Display broadcast address for {{ cidr }}
+    ansible.builtin.debug:
+      msg: broadcast is {{ broadcast }}
+
+  - name: Print addresses on {{ cidr }} from this task's list
+    ansible.builtin.debug:
+      msg: "{{ item | ansible.netcommon.ipaddr(cidr) }}"
+    loop:
+      - 172.16.0.1
+      - 172.25.250.4
+      - 192.168.122.20
+      - 192.0.2.55

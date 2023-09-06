@@ -1,0 +1,19 @@
+- name: Public key is deployed to managed hosts for Ansible and ansible user can use sudo without password
+  hosts: all
+
+# Run this with --ask-pass --ask-become-pass
+
+  tasks:
+    - name: Ensure key is in  ~/.ssh/authorized_hosts on remote servers
+      ansible.posix.authorized_key:
+        user: "{{ ansible_user }}"
+        state: present
+        key: "{{ lookup('file', '~/.ssh/id_rsa.pub') }}"
+
+    - name: Enable the ansible user to use sudo to become root without a password
+      community.general.sudoers:
+        name: ansible-sudo
+        user: "{{ ansible_user }}"
+        nopassword: true
+        commands: ALL
+      become: true

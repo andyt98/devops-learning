@@ -1,0 +1,92 @@
+---
+- hosts: localhost
+  gather_facts: false
+  name: Advance loops examples
+  tasks:
+
+  - name: Remove build files
+    ansible.builtin.file:
+      path: "{{ item }}"
+      state: absent
+    with_items:
+      - "{{ app_a_tmp_files }}"
+      - "{{ app_b_tmp_files }}"
+      - "{{ app_c_tmp_files }}"
+
+  - name: Remove build files
+    ansible.builtin.file:
+      path: "{{ item }}"
+      state: absent
+    loop: "{{ list_of_lists | flatten(levels=1) }}"
+    vars:
+      list_of_lists:
+        - "{{ app_a_tmp_files }}"
+        - "{{ app_b_tmp_files }}"
+        - "{{ app_c_tmp_files }}"
+
+  - name: Set authorized ssh key
+    vars:
+      users:
+        - name: paul
+          password: "{{ paul_pass }}"
+          authorized:
+            - keys/paul_key1.pub
+            - keys/paul_key2.pub
+          mysql:
+            hosts:
+              - "%"
+              - "127.0.0.1"
+              - "::1"
+              - "localhost"
+          groups:
+            - wheel
+        - name: john
+          password: "{{ john_pass }}"
+          authorized:
+            - keys/john_key.pub
+          mysql:
+            password: other-mysql-password
+            hosts:
+              - "utility"
+          groups:
+            - wheel
+            - devops
+    ansible.posix.authorized_key:
+      user: "{{ item[0]['name'] }}"
+      key: "{{ lookup('file', item[1]) }}"
+    loop: "{{ users | subelements('authorized') }}"
+
+
+  - name: Iterate over Users
+    vars:
+      users:
+        demo1:
+          name: Demo User 1
+          mail: demo1@example.com
+        demo2:
+          name: Demo User 2
+          mail: demo2@example.com
+    ansible.builtin.user:
+      name: "{{ item['key'] }}"
+      comment: "{{ item['value']['name'] }}"
+      state: present
+    loop: "{{ users | dict2items }}"
+
+  - name: Iteration Option One
+    ansible.builtin.debug:
+      msg: "{{ item }}"
+    loop: "{{ query('fileglob', '~/.bash*') }}"
+
+  - name: Iteration Option Two
+    ansible.builtin.debug:
+      msg: "{{ item }}"
+    with_fileglob: "~/.bash*"
+
+  - name: Perform smoke test - until loop example
+    ansible.builtin.uri:
+      url: "https://{{ blue }}/status"
+      return_content: true
+    register: smoke_test
+    until: "'STATUS_OK' in smoke_test['content']"
+    retries: 12
+    delay: 10

@@ -1,0 +1,8 @@
+- name: Ping servers to add them to ~/.ssh/known_hosts
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Ping server
+      vars:
+        ansible_host_key_checking: false  # run with this var the first time you connect to the servers
+      ansible.builtin.ping:

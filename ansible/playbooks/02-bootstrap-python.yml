@@ -1,0 +1,19 @@
+- name: Bootstrap Python Installation
+  hosts: all
+  gather_facts: false
+  tasks:
+  - name: Check if Python3 is installed
+    ansible.builtin.raw: python3 --version
+    failed_when: false
+    changed_when: false
+    register: output
+
+  - name: Debug installed Python3 version if it is installed
+    ansible.builtin.debug:
+      msg: "{{ output.stdout_lines }}"
+    when: '"python3: command not found" not in output.stdout'
+
+  - name: Install Python3 on Managed Nodes if it is not installed
+    ansible.builtin.raw: yum install python3 -y
+    when: '"python3: command not found" in output.stdout'
+    become: true

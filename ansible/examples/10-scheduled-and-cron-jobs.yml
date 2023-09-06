@@ -1,0 +1,30 @@
+---
+- name: Recurring cron job
+  hosts: webservers
+  become: true
+
+  tasks:
+    - name: Crontab file exists. The job should run as the devops user every two minutes between 09:00 and 16:59 on Monday through Friday.
+      ansible.builtin.cron:
+        name: Add date and time to a file
+        minute: "*/2"
+        hour: 9-16
+        weekday: 1-5
+        user: devops
+        job: date >> /home/devops/my_date_time_cron_job
+        cron_file: add-date-time
+        state: present
+
+- name: Schedule at task
+  hosts: webservers
+  become: true
+  become_user: devops
+
+  tasks:
+    - name: Create date and time file
+      ansible.posix.at:
+        command: "date > ~/my_at_date_time\n"
+        count: 1
+        units: minutes
+        unique: true
+        state: present

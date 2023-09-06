@@ -1,0 +1,16 @@
+- name: /etc/hosts is up to date
+  hosts: all
+  gather_facts: true
+  tasks:
+  - name: /etc/hosts is up to date
+    ansible.builtin.lineinfile:
+      path: /etc/hosts
+      line: >-
+        {{ hostvars[host]['ansible_facts']['default_ipv4']['address'] }} {{ hostvars[host]['ansible_facts']['fqdn'] }}
+        {{ hostvars[host]['ansible_facts']['hostname'] }}
+      search_string: "{{ hostvars[host]['ansible_facts']['default_ipv4']['address'] }}"
+      state: present
+    loop: "{{ groups['all'] }}"
+    loop_control:
+      loop_var: host
+    become: true

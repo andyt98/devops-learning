@@ -1,0 +1,11 @@
+---
+- name: Wait for ssh connection
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Wait for ssh connection
+      ansible.builtin.wait_for:
+        port: 22
+        delay: 10
+        timeout: 100
+        host: "{{ ansible_host }}"

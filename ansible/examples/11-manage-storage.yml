@@ -1,0 +1,102 @@
+---
+- name: Ensure Apache Storage Configuration
+  hosts: webservers
+  vars:
+    partitions:
+      - number: 1
+        start: 1MiB
+        end: 257MiB
+      - number: 2
+        start: 257MiB
+        end: 513MiB
+
+    volume_groups:
+      - name: apache-vg
+        devices: /dev/vdb1,/dev/vdb2
+
+    logical_volumes:
+      - name: content-lv
+        size: 128M
+        vgroup: apache-vg
+        mount_path: /var/www
+      - name: logs-lv
+        size: 256M
+        vgroup: apache-vg
+        mount_path: /var/log/httpd
+  tasks:
+    - name: Correct partitions exist on /dev/vdb
+      community.general.parted:
+        device: /dev/vdb
+        state: present
+        number: "{{ item.number }}"
+        part_start: "{{ item.start }}"
+        part_end: "{{ item.end }}"
+      loop: "{{ partitions }}"
+
+    - name: Ensure Volume Groups Exist
+      community.general.lvg:
+        vg: "{{ item.name }}"
+        pvs: "{{ item.devices }}"
+      loop: "{{ volume_groups }}"
+
+    - name: Create each Logical Volume (LV) if needed
+      community.general.lvol:
+        vg: "{{ item.vgroup }}"
+        lv: "{{ item.name }}"
+        size: "{{ item.size }}"
+      loop: "{{ logical_volumes }}"
+      when: item.name not in ansible_lvm["lvs"]
+
+    - name: Ensure XFS Filesystem exists on each LV
+      community.general.filesystem:
+        dev: "/dev/{{ item.vgroup }}/{{ item.name }}"
+        fstype: xfs
+      loop: "{{ logical_volumes }}"
+
+    - name: Ensure the correct capacity for each LV
+      community.general.lvol:
+        vg: "{{ item.vgroup }}"
+        lv: "{{ item.name }}"
+        size: "{{ item.size }}"
+        resizefs: true
+        force: true
+      loop: "{{ logical_volumes }}"
+
+    - name: Each Logical Volume is mounted
+      ansible.posix.mount:
+        path: "{{ item.mount_path }}"
+        src: "/dev/{{ item.vgroup }}/{{ item.name }}"
+        fstype: xfs
+        opts: noatime
+        state: mounted
+      loop: "{{ logical_volumes }}"
+# -----------------------------------------------------------------------------------------------------
+    - name: Mount NFS share
+      ansible.posix.mount:
+        path: /nfsshare
+        src: 172.25.250.100:/share
+        fstype: nfs
+        opts: defaults
+        dump: '0'
+        passno: '0'
+        state: mounted
+
+    - name: Create new swap VG
+      community.general.lvg:
+        vg: vgswap
+        pvs: /dev/vda1
+        state: present
+
+    - name: Create new swap LV
+      community.general.lvol:
+        vg: vgswap
+        lv: lvswap
+        size: 10g
+
+    - name: Format swap LV
+      ansible.builtin.command: mkswap /dev/vgswap/lvswap
+      when: ansible_swaptotal_mb < 128
+
+    - name: Activate swap LV
+      ansible.builtin.command: swapon /dev/vgswap/lvswap
+      when: ansible_swaptotal_mb < 128

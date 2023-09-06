@@ -1,0 +1,9 @@
+[all]
+rhel-test-2 ansible_host=10.13.173.113
+almalinux ansible_host=localhost
+
+[all:children]
+webservers
+
+[webservers]
+rhel-test-1 ansible_host=10.13.173.112

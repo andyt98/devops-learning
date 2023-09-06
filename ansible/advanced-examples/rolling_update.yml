@@ -1,0 +1,21 @@
+---
+- name: Update Webservers
+  hosts: web_servers
+  max_fail_percentage: 30%
+  serial:
+    - 2
+    - 10%
+    - 100%
+  tasks:
+    - name: Step One
+      shell: /usr/bin/some_command
+
+    - name: Step Two
+      shell: /usr/bin/some_other_command
+
+    - name: Reactivate Hosts
+      shell: /sbin/activate.sh {{ active_hosts_string }}
+      run_once: true
+      delegate_to: monitor.example.com
+      vars:
+        active_hosts_string: "{{ ansible_play_batch | join(' ')}}"

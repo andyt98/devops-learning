@@ -1,0 +1,146 @@
+---
+- hosts: localhost
+  gather_facts: false
+  name: Filters examples
+  tasks:
+  - name: Filters examples
+    ansible.builtin.debug:
+      msg: |
+        {{ ("42" | int) + 1 }}
+        {{ 16 | root }}
+        {{ 4 | log(2) }}
+        {{ 3 | pow(3) }}
+        {{ -7 | abs }}
+        {{ 6.55 | round }}
+
+  - name: All three of these assertions are true
+    ansible.builtin.assert:
+      that:
+        - "{{ [2, 4, 6, 8, 10, 12] | length }} is eq( 6 )"
+        - "{{ [2, 4, 6, 8, 10, 12] | first }} is eq( 2 )"
+        - "{{ [2, 4, 6, 8, 10, 12] | last }} is eq( 12 )"
+
+  - name: Random Filter
+    ansible.builtin.debug:
+      msg: "{{ ['Douglas', 'Marvin', 'Arthur'] | random }}"
+
+  - name: Reversing and sorting lists
+    ansible.builtin.assert:
+      that:
+        - "{{ [2, 4, 6, 8, 10] | reverse | list }} is eq( [10, 8, 6, 4, 2] )"
+        - "{{ [4, 8, 10, 6, 2] | sort | list }} is eq( [2, 4, 6, 8, 10] )"
+
+  - name: Flatten turns nested lists on the left to list on the right
+    ansible.builtin.assert:
+      that:
+        - "{{ [2, [4, [6, 8]], 10] | flatten }} is eq( [2, 4, 6, 8, 10] )"
+
+  - name: Leaves unique elements
+    ansible.builtin.assert:
+      that:
+        - "{{ [1, 1, 2, 2, 2, 3, 4, 4] | unique | list }} is eq( [ 1, 2, 3, 4 ] )"
+
+  - name: Set theory operations
+    ansible.builtin.assert:
+      that:
+        - "{{ [2, 4, 6, 8, 10] | union([2, 4, 6, 16]) }} is eq( [2, 4, 6, 8, 10, 16] )"
+        - "{{ [2, 4, 6, 8, 10] | intersect([2, 4, 6, 16]) }} is eq( [2, 4, 6] )"
+        - "{{ [2, 4, 6, 8, 10] | difference([2, 4, 6, 16]) }} is eq( [8, 10] )"
+
+  - name: Join two dictionaries into one
+    vars:
+      expected:
+        A: 1
+        B: 4
+        C: 5
+    ansible.builtin.assert:
+      that:
+        - "{{ {'A': 1, 'B': 2} | combine({'B': 4, 'C': 5}) }} is eq( expected )"
+
+  - name: Converting between dictionaries and lists
+    vars:
+      characters_dict:
+        Douglas: Human
+        Marvin: Robot
+        Arthur: Human
+      characters_items:
+        - key: Douglas
+          value: Human
+        - key: Marvin
+          value: Robot
+        - key: Arthur
+          value: Human
+    ansible.builtin.assert:
+      that:
+        - "{{ characters_dict | dict2items }} is eq( characters_items )"
+        - "{{ characters_items | items2dict }} is eq( characters_dict )"
+
+  - name: The string's SHA-1 hash
+    vars:
+      expected: '8bae3f7d0a461488ced07b3e10ab80d018eb1d8c'
+    ansible.builtin.assert:
+      that:
+        - "'{{ 'Arthur' | hash('sha1') }}' is eq( expected )"
+
+  - name: Generate password hash
+    ansible.builtin.debug:
+      msg: "{{ 'secret_password' | password_hash('sha512') }}"
+
+  - name: Base64 encoding and decoding of values
+    ansible.builtin.assert:
+      that:
+        - "'{{ 'âÉïôú' | b64encode }}' is eq( 'w6LDicOvw7TDug==' )"
+        - "'{{ 'w6LDicOvw7TDug==' | b64decode }}' is eq( 'âÉïôú' )"
+
+  - name: Put quotes around 'my_string'
+    vars:
+      my_string: Hello World
+    ansible.builtin.debug:
+      msg: "{{ my_string | quote }}"
+
+  - name: Change case of characters
+    ansible.builtin.assert:
+      that:
+        - "'{{ 'Marvin' | lower }}' is eq( 'marvin' )"
+        - "'{{ 'Marvin' | upper }}' is eq( 'MARVIN' )"
+        - "'{{ 'marvin' | capitalize }}' is eq( 'Marvin' )"
+
+  - name: Replace 'ar' with asterisks
+    ansible.builtin.assert:
+      that:
+        - "'{{ 'marvin, arthur' | replace('ar', '**') }}' is eq( 'm**vin, **thur' )"
+
+
+  - name: Test results of regex search and search-and-replace
+    ansible.builtin.assert:
+      that:
+        - >
+          "'{{ 'marvin, arthur' | regex_search('ar\S*r') }}' is eq( 'arthur' )"
+        - >
+          "'{{ 'arthur up' | regex_replace('ar(\S*)r', '\\1mb') }}' is eq( 'thumb up' )"
+
+  - name: Get the 'name' elements from the list of dictionaries in 'hosts'
+    vars:
+      hosts:
+        - name: bastion
+          ip:
+            - 172.25.250.254
+            - 172.25.252.1
+        - name: classroom
+          ip:
+            - 172.25.252.254
+    ansible.builtin.assert:
+      that:
+        - "{{ hosts | community.general.json_query('[*].name') }} is eq( ['bastion','classroom'] )"
+
+  - name: Convert between JSON and YAML format
+    vars:
+      hosts:
+        - name: bastion
+          ip:
+            - 172.25.250.254
+            - 172.25.252.1
+      hosts_json: '[{"name": "bastion", "ip": ["172.25.250.254", "172.25.252.1"]}]'
+    ansible.builtin.assert:
+      that:
+        - "'{{ hosts | to_json }}' is eq( hosts_json )"

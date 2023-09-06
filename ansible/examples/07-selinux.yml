@@ -1,0 +1,37 @@
+- name: Time Synchronization Play
+  hosts: webservers
+  vars:
+    selinux_state: enforcing
+    selinux_booleans:
+      - name: 'httpd_enable_homedirs'
+        state: 'on'
+        persistent: 'yes'
+    selinux_fcontexts:
+      - target: '/srv/www(/.*)?'
+        setype: 'httpd_sys_content_t'
+        state: 'present'
+    selinux_restore_dirs:
+      - /srv/www
+    selinux_ports:
+      - ports: '82'
+        setype: 'http_port_t'
+        proto: 'tcp'
+        state: 'present'
+
+  tasks:
+    - name: Apply SELinux role
+      block:
+        - name: Include SELinux role
+          ansible.builtin.include_role:
+            name: rhel-system-roles.selinux
+      rescue:
+        - name: Check for failure for other reasons than required reboot
+          ansible.builtin.fail:
+          when: not selinux_reboot_required
+
+        - name: Restart managed host
+          ansible.builtin.reboot:
+
+        - name: Reapply SELinux role to complete changes
+          ansible.builtin.include_role:
+            name: rhel-system-roles.selinux

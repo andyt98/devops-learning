@@ -1,0 +1,21 @@
+- name: Example Jinja Control Structures
+  hosts: all
+  gather_facts: true
+  tasks:
+  - name: Loop example
+    ansible.builtin.debug:
+      msg: >
+        {% for host in groups['all'] %}
+        {{ hostvars[host]['ansible_facts']['default_ipv4']['address'] }}
+        {% endfor %}
+
+  - name: Conditionals example
+    ansible.builtin.debug:
+      msg: >
+        {% if ansible_facts.distribution == "Ubuntu" %}
+        The distribution is Ubuntu
+        {% elif ansible_facts.distribution == "RedHat" %}
+        The distribution is RedHat
+        {% else %}
+        The distribution is neither Ubuntu or RedHat
+        {% endif %}

@@ -1,0 +1,31 @@
+version: '3.7'
+services:
+    db:
+        image: 'postgres'
+        environment:
+            - POSTGRES_DB=blogpost
+            - POSTGRES_USER=intern
+            - POSTGRES_PASSWORD=ship     
+        networks:
+            - journal-nw
+        volumes: 
+            - journal-db:/var/lib/postgresql/data
+
+    webapp:
+        build: .
+        environment:
+            - DJANGO_LOCALDB=false
+        ports: 
+            - "20080:8000"
+        command: bash -c "sleep 5 && python manage.py makemigrations && python manage.py migrate && python manage.py runserver 0.0.0.0:8000" 
+        depends_on:
+            - db
+        networks:
+            - journal-nw
+       
+            
+networks:
+    journal-nw:
+        driver: bridge
+volumes:
+    journal-db:

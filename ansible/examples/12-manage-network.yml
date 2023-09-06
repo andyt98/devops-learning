@@ -1,0 +1,43 @@
+- name: NIC Configuration
+  hosts: webservers
+  vars:
+    network_connections:
+      - name: ens4
+        persistent_state: present
+        type: ethernet
+        autoconnect: true
+        ip:
+          address:
+            - 172.25.250.30/24
+        zone: external
+  roles:
+    - rhel-system-roles.network
+
+  tasks:
+    - name: NIC configuration
+      community.general.nmcli:
+        conn_name: ens4-conn
+        ifname: ens4
+        type: ethernet
+        ip4: 172.25.250.30/24
+        gw4: 172.25.250.1
+        state: present
+
+    - name: Change hostname
+      ansible.builtin.hostname:
+        name: managedhost1
+
+    - name: Enabling http rule
+      ansible.posix.firewalld:
+        service: http
+        permanent: true
+        state: enabled
+
+    - name: Moving eth0 to external
+      ansible.posix.firewalld:
+        zone: external
+        interface: eth0
+        permanent: true
+        state: enabled
+
+# ansible webservers -m setup -a 'gather_subset=network'
