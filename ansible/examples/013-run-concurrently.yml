@@ -1,0 +1,37 @@
+---
+- hosts: localhost
+  gather_facts: no
+  tasks:
+    - name: Download File 1
+      ansible.builtin.uri:
+        url: http://example.com/file1
+        dest: /tmp/file1
+        status_code: 200
+      async: 300  # Set a timeout for the task (in seconds)
+      poll: 0  # Poll for completion immediately (necessary to run concurrently)
+      register: file1_task
+
+    - name: Download File 2
+      ansible.builtin.uri:
+        url: http://example.com/file2
+        dest: /tmp/file2
+        status_code: 200
+      async: 300  # Set a timeout for the task (in seconds)
+      poll: 0  # Poll for completion immediately (necessary to run concurrently)
+      register: file2_task
+
+    - name: Wait for File 1 to complete
+      async_status:
+        jid: "{{ file1_task.ansible_job_id }}"
+      register: file1_result
+      until: file1_result.finished
+      retries: 30
+      delay: 10
+
+    - name: Wait for File 2 to complete
+      async_status:
+        jid: "{{ file2_task.ansible_job_id }}"
+      register: file2_result
+      until: file2_result.finished
+      retries: 30
+      delay: 10
